@@ -1,81 +1,42 @@
 package com.example.retailapi.controller;
 
 import com.example.retailapi.model.Product;
+import com.example.retailapi.service.ProductService;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.server.ResponseStatusException;
 
 import javax.validation.Valid;
-import java.util.ArrayList;
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/products")
 public class ProductController {
 
-    private List<Product> products = new ArrayList<>();
+    private final ProductService productService;
 
-    public ProductController() {
-        products.add(new Product(1, "Laptop", "Electronics", 999.99));
-        products.add(new Product(2, "Sneakers", "Footwear", 59.99));
+    public ProductController(ProductService productService) {
+        this.productService = productService;
     }
 
     @GetMapping
-    public List<Product> getAllProducts(
-            @RequestParam Optional<String> category,
+    public ResponseEntity<List<Product>> getAllProducts(
+            @RequestParam Optional<String> name,
+            @RequestParam Optional<BigDecimal> minPrice,
+            @RequestParam Optional<BigDecimal> maxPrice,
+            @RequestParam Optional<String> sortBy,
             @RequestParam Optional<Integer> page,
-            @RequestParam Optional<Integer> size) {
-        
-        List<Product> filteredProducts = category.isPresent()
-                ? products.stream().filter(p -> p.getCategory().equalsIgnoreCase(category.get())).collect(Collectors.toList())
-                : products;
-
-        int pageSize = size.orElse(5);
-        int pageNumber = page.orElse(0);
-        int start = pageNumber * pageSize;
-        int end = Math.min(start + pageSize, filteredProducts.size());
-
-        return filteredProducts.subList(start, end);
-    }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<Product> getProductById(@PathVariable int id) {
-        Optional<Product> product = products.stream().filter(p -> p.getId() == id).findFirst();
-        return product.map(ResponseEntity::ok)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+            @RequestParam Optional<Integer> pageSize) {
+        List<Product> products = productService.getAllProducts(name, minPrice, maxPrice, sortBy, page, pageSize);
+        return ResponseEntity.ok(products);
     }
 
     @PostMapping
-    public ResponseEntity<Product> addProduct(@Valid @RequestBody Product product) {
-        products.add(product);
-        return new ResponseEntity<>(product, HttpStatus.CREATED);
+    public ResponseEntity<Product> createProduct(@Valid @RequestBody Product product) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(productService.createProduct(product));
     }
 
-    @PutMapping("/{id}")
-    public ResponseEntity<Product> updateProduct(@PathVariable int id, @Valid @RequestBody Product updatedProduct) {
-        Optional<Product> product = products.stream().filter(p -> p.getId() == id).findFirst();
-        
-        if (product.isPresent()) {
-            products.remove(product.get());
-            updatedProduct.setId(id);
-            products.add(updatedProduct);
-            return ResponseEntity.ok(updatedProduct);
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
-        }
-    }
-
-    @DeleteMapping("/{id}")
-    public ResponseEntity<String> deleteProduct(@PathVariable int id) {
-        Optional<Product> product = products.stream().filter(p -> p.getId() == id).findFirst();
-        if (product.isPresent()) {
-            products.remove(product.get());
-            return new ResponseEntity<>("Product deleted successfully", HttpStatus.OK);
-        } else {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found");
-        }
-    }
+    // Update and delete methods would go here
 }
