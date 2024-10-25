@@ -1,4 +1,3 @@
-// src/main/java/com/example/retailapi/model/Product.java
 package com.example.retailapi.model;
 
 import javax.validation.constraints.NotBlank;
